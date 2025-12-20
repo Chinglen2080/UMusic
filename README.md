@@ -27,14 +27,14 @@ A feature-rich, lightweight PSP music player.
 
 UMusic is a lightweight music player for the PSP, completely developed in Lua. It offers a variety of features, such as the ability to listen to music with the screen off, autoplay, looping, and more.
 
-- [Installation](https://github.com/rdWei/UMusic#installation)
-- [Usage](https://github.com/rdWei/UMusic#usage)
+- [Installation](https://github.com/SamueleAmato/UMusic#installation)
+- [Usage](https://github.com/SamueleAmato/UMusic#usage)
 
 ---
 
 ## Installation
 
-- Download and extract [this](https://github.com/rdWei/UMusic/releases/download/v0.1.0/UMusic-main.zip) zip file.
+- Download and extract [this](https://github.com/SamueleAmato/UMusic/releases/download/v0.1.0/UMusic-main.zip) zip file.
 - Put the "UMusic-main" folder inside `PSP/GAME/`.
 - If you want to add music, place it in `UMusic-main/songs`.
 

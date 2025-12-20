@@ -1,5 +1,5 @@
--- Made with <3 by rdWei
--- GitHub: https://github.com/rdWei
+-- Made with <3 by SamueleAmato
+-- GitHub: https://github.com/SamueleAmato
 
 -- Import utils
 local utils = require("src.utils")
