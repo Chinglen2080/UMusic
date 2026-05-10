@@ -32,6 +32,7 @@ __HELP_MESSAGE = [[
 *   LOOP ON       : WLAN SWITCH ->   *
 *   LOOP OFF      : WLAN SWITCH <-   *
 *   SQUARE        : AUTOPLAY ON/OFF  *
+*   EXIT/QUIT     : SELECT           *
 *                                    *
 **************************************
 
