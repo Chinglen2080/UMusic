@@ -1,6 +1,8 @@
 -- Made with <3 by SamueleAmato
 -- GitHub: https://github.com/SamueleAmato
 
+-- last mod time 1533 ist by Chinglen2080
+
 -- Import utils
 local utils = require("src.utils")
 
@@ -13,6 +15,29 @@ color.loadpalette()
 -- Check if there are songs in /songs
 checkForSongs()
 
+-- Also append files from ms0:\MUSIC if present
+local ms0_songs = {}
+if files.exists("ms0:/MUSIC") then
+  ms0_songs = files.listfiles("ms0:/MUSIC")
+end
+
+-- merge ms0_songs into songs (avoid duplicates by name)
+local seen = {}
+for _, v in ipairs(songs) do seen[v.name] = true end
+for _, v in ipairs(ms0_songs) do
+  if not seen[v.name] then
+    table.insert(songs, v)
+    seen[v.name] = true
+  end
+end
+
+-- if len of the gongs is 0
+if #songs > 0 then
+  song = sound.load(string.format("songs/%s", songs[1].name))
+else
+  song = nil
+end
+
 -- Current song selected by Up / Down button
 local current_selection = 1
 
@@ -23,7 +48,8 @@ local isLooping = false
 local current_songs_name = "NONE"
 
 -- Load the first song in /songs dir, just to initialize song variable
-song = sound.load(string.format("songs/%s", songs[1].name))
+-- song = sound.load(string.format("songs/%s", songs[1].name))
+-- above done at line 36
 
 -- Declare pause var
 local isPaused = false
@@ -32,15 +58,17 @@ local isStarted = false
 
 local autoPlay = false
 
-max = #songs
+local shouldQuit = false
 
+max = #songs
 local min = 1
 
 if #songs > 15 then
   max = 16
 end
 
-local oldmax = max
+oldmax = max
+
 
 local isScreenOn = true
 
@@ -199,6 +227,12 @@ while true do
     if current_selection ~= #songs then
       current_selection = current_selection + 1
     end
+
+  elseif buttons.select then
+    if song and sound.playing(song) then
+      sound.stop(song)
+    end
+    shouldQuit = true
   elseif buttons.circle then
     help_message = false
     sound.pause(song)
@@ -221,6 +255,11 @@ while true do
         autoPlay = true
       end
     end
+  end
+
+  -- let the select button go to the main menu of the psp (or the arc launcher if you have it)
+  if shouldQuit then
+    break
   end
 
 
