@@ -6,22 +6,23 @@
 -- Import utils
 local utils = require("src.utils")
 
--- Append all files in /songs folder
-local songs = files.listfiles(__SONGS_DIR)
-
--- Load color plette
-color.loadpalette()
-
--- Check if there are songs in /songs
-checkForSongs()
-
--- Also append files from ms0:\MUSIC if present
-local ms0_songs = {}
-if files.exists("ms0:/MUSIC") then
-  ms0_songs = files.listfiles("ms0:/MUSIC")
+-- Helper to collect files from a directory and store full path
+local function add_files_from(dir)
+  local res = {}
+  if files.exists(dir) then
+    local tmp = files.listfiles(dir)
+    for _, f in ipairs(tmp) do
+      table.insert(res, { name = f.name, path = dir .. "/" .. f.name })
+    end
+  end
+  return res
 end
 
--- merge ms0_songs into songs (avoid duplicates by name)
+-- Gather songs from __SONGS_DIR and ms0:/MUSIC
+local songs = add_files_from(__SONGS_DIR)
+local ms0_songs = add_files_from("ms0:/MUSIC")
+
+-- Merge ms0_songs into songs (avoid duplicates by name)
 local seen = {}
 for _, v in ipairs(songs) do seen[v.name] = true end
 for _, v in ipairs(ms0_songs) do
@@ -31,25 +32,27 @@ for _, v in ipairs(ms0_songs) do
   end
 end
 
--- if len of the gongs is 0
+-- Load color palette
+color.loadpalette()
+
+-- Check if there are songs in /songs
+checkForSongs()
+
+-- Initialize song variable (use path). song may be nil.
+local song = nil
 if #songs > 0 then
-  song = sound.load(string.format("songs/%s", songs[1].name))
-else
-  song = nil
+  song = sound.load(songs[1].path)
 end
 
 -- Current song selected by Up / Down button
 local current_selection = 1
+if #songs == 0 then current_selection = 0 end
 
 -- Check if loop is active or not
 local isLooping = false
 
 -- Set the current song name to NONE
 local current_songs_name = "NONE"
-
--- Load the first song in /songs dir, just to initialize song variable
--- song = sound.load(string.format("songs/%s", songs[1].name))
--- above done at line 36
 
 -- Declare pause var
 local isPaused = false
@@ -69,12 +72,11 @@ end
 
 oldmax = max
 
-
 local isScreenOn = true
 
 old_h_state = 0
 
--- Main  loop
+-- Main loop
 while true do
   buttons.read()
 
@@ -84,27 +86,26 @@ while true do
     if buttons.held.r then
       isScreenOn = true
     end
-    -- Copy for play in background 
-    if isStarted and not isPaused and not sound.playing(song) and autoPlay then
+    -- Play next in background if needed
+    if isStarted and not isPaused and song and not sound.playing(song) and autoPlay then
       if current_selection == #songs then
         current_selection = 0
       end
       current_selection = current_selection + 1
-      song = sound.load(string.format("songs/%s", songs[current_selection].name))
-      sound.vol(song, 100)
-      sound.play(song, 1)
+      if songs[current_selection] then
+        song = sound.load(songs[current_selection].path)
+        if song then sound.vol(song, 100); sound.play(song, 1) end
+      end
     end
 
     utils.sleep(1)
   end
 
-  -- Clear screen whit black color
+  -- Clear screen with black color
   screen.clear(color.black)
 
   -- Print battery percentage
-
   batt_perc = batt.lifepercent()
-
 
   screen.txtbgcolor(color.magenta)
   screen.txtcolor(color.white)
@@ -121,7 +122,7 @@ while true do
   -- Print ascii art + version + help message
   screen.consoleprint(__ASCII_ART)
   
-  -- Move to x = 1 and y = 9 and print current playing  song
+  -- Move to x = 1 and y = 9 and print current playing song
   screen.consolexy(1, 9)
   screen.txtbgcolor(color.red)
   screen.txtcolor(color.white)
@@ -138,7 +139,6 @@ while true do
   end
 
   -- Print if song is paused or not
-  
   if isPaused then
     screen.consolexy(50, 7)
     screen.txtbgcolor(color.navy)
@@ -146,15 +146,12 @@ while true do
     screen.consoleprint(":: SONG PAUSED ::")
   end
 
-  -- Set color to normal and print 3 song
+  -- Set color to normal and print song list
   utils.normal()
 
   local c = min
   local k = 1
   for i = min, max do
-    
-    -- Control Limit
-
     utils.normal()
     screen.consolexy(1, 13+k)
     if c == current_selection then
@@ -164,7 +161,11 @@ while true do
       screen.consoleprint("  ")
       utils.normal()
     end
-    screen.consoleprint(string.format("%s", songs[i].name))
+    if songs[i] then
+      screen.consoleprint(string.format("%s", songs[i].name))
+    else
+      screen.consoleprint(" ")
+    end
     utils.normal()
     if i == current_selection then
       screen.consoleprint(" <")
@@ -186,27 +187,28 @@ while true do
     screen.consoleprint(":: AUTOPLAY: OFF ::")
   end
 
-
   -- Event Handling
-
-
   if buttons.cross then
     isStarted = true
     help_message = false
     isPaused = false
-    current_songs_name = removeExtention(songs[current_selection].name)
-    everPlayed = true
-    song = sound.load(string.format("songs/%s", songs[current_selection].name))
-    sound.vol(song, 100)
-    sound.play(song, 1)
+    if songs[current_selection] then
+      current_songs_name = removeExtention(songs[current_selection].name)
+      everPlayed = true
+      song = sound.load(songs[current_selection].path)
+      if song then sound.vol(song, 100); sound.play(song, 1) end
+    end
+
   elseif buttons.l then
     isScreenOn = false
     help_message = false
     screen.display(0)
+
   elseif buttons.r then
     isScreenOn = true
     help_message = false
     screen.display(1)
+
   elseif buttons.up then
     help_message = false
     if current_selection < min + 1 and current_selection ~= 1 then
@@ -216,14 +218,13 @@ while true do
     if current_selection ~= 1 then
       current_selection = current_selection - 1
     end
+
   elseif buttons.down then
     help_message = false
-
     if current_selection > max - 1 and current_selection ~= #songs then
       max = max + 1
       min = min + 1
     end
-
     if current_selection ~= #songs then
       current_selection = current_selection + 1
     end
@@ -233,15 +234,17 @@ while true do
       sound.stop(song)
     end
     shouldQuit = true
+
   elseif buttons.circle then
     help_message = false
-    sound.pause(song)
+    if song then sound.pause(song) end
     isPaused = not isPaused
+
   elseif buttons.start then
     help_message = not help_message
+
   elseif buttons.square then
     if autoPlay then
-      -- Print Warning
       autoPlay = false
     else
       if isLooping then
@@ -262,15 +265,14 @@ while true do
     break
   end
 
-
   if buttons.wlan then
-    if not sound.looping(song) then
+    if song and not sound.looping(song) then
       sound.loop(song)
       isLooping = true
       autoPlay = false
     end
   elseif not buttons.wlan then
-    if sound.looping(song) then
+    if song and sound.looping(song) then
       sound.loop(song)
       isLooping = false
     end
@@ -297,6 +299,7 @@ while true do
   else
     screen.consoleprint(":: VOL MAX ::")
   end
+
   -- Print help message
   if help_message then
     screen.consolexy(0, 0)
@@ -305,18 +308,18 @@ while true do
     screen.consoleprint(__HELP_MESSAGE)
   end
 
-
   -- Refresh screen
   screen.flip()
 
-  if isStarted and not isPaused and not sound.playing(song) and autoPlay then
+  if isStarted and not isPaused and song and not sound.playing(song) and autoPlay then
     if current_selection == #songs then
       current_selection = 0
     end
     current_selection = current_selection + 1
-    song = sound.load(string.format("songs/%s", songs[current_selection].name))
-    sound.vol(song, 100)
-    sound.play(song, 1)
+    if songs[current_selection] then
+      song = sound.load(songs[current_selection].path)
+      if song then sound.vol(song, 100); sound.play(song, 1) end
+    end
   end
 
 end
